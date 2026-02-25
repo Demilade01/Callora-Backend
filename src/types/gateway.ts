@@ -42,6 +42,27 @@ export interface UsageStore {
   getEvents(apiKey?: string): UsageEvent[];
 }
 
+/** A registered API with its upstream base URL. */
+export interface ApiRegistryEntry {
+  id: string;
+  slug: string;
+  base_url: string;
+  developerId: string;
+}
+
+/** Registry for resolving API slugs / IDs to their upstream entries. */
+export interface ApiRegistry {
+  resolve(slugOrId: string): ApiRegistryEntry | undefined;
+}
+
+/** Configuration for proxy behaviour. */
+export interface ProxyConfig {
+  /** Upstream request timeout in milliseconds (default: 30000). */
+  timeoutMs: number;
+  /** Request headers to strip before forwarding to upstream. */
+  stripHeaders: string[];
+}
+
 /** Dependencies injected into the gateway router factory. */
 export interface GatewayDeps {
   billing: BillingService;
@@ -49,4 +70,14 @@ export interface GatewayDeps {
   usageStore: UsageStore;
   upstreamUrl: string;
   apiKeys: Map<string, ApiKey>;
+}
+
+/** Dependencies injected into the proxy router factory. */
+export interface ProxyDeps {
+  billing: BillingService;
+  rateLimiter: RateLimiter;
+  usageStore: UsageStore;
+  registry: ApiRegistry;
+  apiKeys: Map<string, ApiKey>;
+  proxyConfig?: Partial<ProxyConfig>;
 }
