@@ -1,51 +1,67 @@
 import express from 'express';
-import developerRoutes from './routes/developerRoutes.js';
+import { createDeveloperRouter } from './routes/developerRoutes.js';
 import { createGatewayRouter } from './routes/gatewayRoutes.js';
 import { createProxyRouter } from './routes/proxyRoutes.js';
 import { createBillingService } from './services/billingService.js';
 import { createRateLimiter } from './services/rateLimiter.js';
 import { createUsageStore } from './services/usageStore.js';
+import { createSettlementStore } from './services/settlementStore.js';
 import { createApiRegistry } from './data/apiRegistry.js';
 import { ApiKey } from './types/gateway.js';
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
-
 app.use(express.json());
-app.use('/api/developers', developerRoutes);
 
-// Shared services
-const billing = createBillingService({ dev_001: 1000 });
-const rateLimiter = createRateLimiter(100, 60_000);
+// ── Shared Service Instances ────────────────────────────────────────────────
+const MOCK_DEVELOPER_BALANCES: Record<string, number> = {
+  dev_001: 50.0,
+  dev_002: 120.5,
+};
+
+const billing = createBillingService(MOCK_DEVELOPER_BALANCES);
+const rateLimiter = createRateLimiter(5, 60_000); // 5 reqs per minute
 const usageStore = createUsageStore();
+const settlementStore = createSettlementStore();
+const registry = createApiRegistry();
 
 const apiKeys = new Map<string, ApiKey>([
   ['test-key-1', { key: 'test-key-1', developerId: 'dev_001', apiId: 'api_001' }],
+  ['test-key-2', { key: 'test-key-2', developerId: 'dev_002', apiId: 'api_002' }],
 ]);
 
-// Legacy gateway route (existing)
+// ── Routes ──────────────────────────────────────────────────────────────────
+
+// 1. Developer Dashboard Routes (Auth required)
+const developerRouter = createDeveloperRouter({
+  settlementStore,
+  usageStore,
+});
+app.use('/api/developers', developerRouter);
+
+// 2. Main API Gateway Proxy (Legacy)
 const gatewayRouter = createGatewayRouter({
   billing,
   rateLimiter,
   usageStore,
-  upstreamUrl: process.env.UPSTREAM_URL ?? 'http://localhost:4000',
+  upstreamUrl: 'http://localhost:4000', // Mock upstream
   apiKeys,
 });
 app.use('/api/gateway', gatewayRouter);
 
-// New proxy route: /v1/call/:apiSlugOrId/*
+// 3. Main API Gateway Proxy (Dynamic V1)
 const proxyRouter = createProxyRouter({
   billing,
   rateLimiter,
   usageStore,
-  registry: createApiRegistry(),
+  registry,
   apiKeys,
-  proxyConfig: {
-    timeoutMs: parseInt(process.env.PROXY_TIMEOUT_MS ?? '30000', 10),
-  },
 });
 app.use('/v1/call', proxyRouter);
 
+const PORT = process.env.PORT ?? 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'callora-backend' });
 });
