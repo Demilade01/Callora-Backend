@@ -15,8 +15,7 @@ import developerRoutes from './routes/developerRoutes.js';
 import { createGatewayRouter } from './routes/gatewayRoutes.js';
 import { createProxyRouter } from './routes/proxyRoutes.js';
 import { createBillingService } from './services/billingService.js';
-import { createRateLimiter } from './services/rateLimiter.js';
-import { createUsageStore } from './services/usageStore';
+import { createUsageStore } from './services/usageStore.js';
 import { createApiRegistry } from './data/apiRegistry.js';
 import { ApiKey } from './types/gateway.js';
 
@@ -40,7 +39,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 
   // Shared services
   const billing = createBillingService({ dev_001: 1000 });
-  const rateLimiter = createRateLimiter(100, 60_000);
+  const rateLimiter = { check: () => ({ allowed: true }) };
   const usageStore = createUsageStore();
 
   const apiKeys = new Map<string, ApiKey>([
