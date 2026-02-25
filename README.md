@@ -30,18 +30,24 @@ API gateway, usage metering, and billing services for the Callora API marketplac
 
 ## Scripts
 
-| Command        | Description                    |
-|----------------|--------------------------------|
-| `npm run dev`  | Run with tsx watch (no build)  |
-| `npm run build`| Compile TypeScript to `dist/`  |
-| `npm start`    | Run compiled `dist/index.js`   |
+| Command         | Description                   |
+| --------------- | ----------------------------- |
+| `npm run dev`   | Run with tsx watch (no build) |
+| `npm run build` | Compile TypeScript to `dist/` |
+| `npm start`     | Run compiled `dist/index.js`  |
 
 ## Project layout
 
 ```
 callora-backend/
 ├── src/
-│   └── index.ts   # Express app and routes
+│   ├── config/        # Environment and constants
+│   ├── middleware/    # Express middleware
+│   ├── repositories/  # Data access layer
+│   ├── routes/        # Route definitions
+│   ├── services/      # Business logic
+│   ├── types/         # Shared TypeScript types
+│   └── index.ts       # Express app entry point
 ├── package.json
 └── tsconfig.json
 ```

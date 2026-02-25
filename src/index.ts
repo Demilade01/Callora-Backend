@@ -1,25 +1,15 @@
-import express from 'express';
+import express from "express";
+import { config } from "./config/index.js";
+import routes from "./routes/index.js";
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
 
 app.use(express.json());
+app.use("/api", routes);
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'callora-backend' });
-});
-
-app.get('/api/apis', (_req, res) => {
-  res.json({ apis: [] });
-});
-
-app.get('/api/usage', (_req, res) => {
-  res.json({ calls: 0, period: 'current' });
-});
-
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Callora backend listening on http://localhost:${PORT}`);
+if (config.nodeEnv !== "test") {
+  app.listen(config.port, () => {
+    console.log(`Callora backend listening on http://localhost:${config.port}`);
   });
 }
 
