@@ -1,5 +1,3 @@
-import { describe, it, before, after, beforeEach } from 'node:test';
-import assert from 'node:assert/strict';
 import express from 'express';
 import type { Server } from 'node:http';
 import { createGatewayRouter } from '../routes/gatewayRoutes.js';
@@ -36,7 +34,7 @@ let billing: MockSorobanBilling;
 let rateLimiter: InMemoryRateLimiter;
 let usageStore: InMemoryUsageStore;
 
-before(async () => {
+beforeAll(async () => {
   // Start mock upstream
   await new Promise<void>((resolve) => {
     const upstream = express();
@@ -86,7 +84,7 @@ before(async () => {
   });
 });
 
-after(async () => {
+afterAll(async () => {
   await new Promise<void>((resolve) => gatewayServer.close(() => resolve()));
   await new Promise<void>((resolve) => upstreamServer.close(() => resolve()));
 });
@@ -116,20 +114,20 @@ describe('Gateway Proxy Integration', () => {
       body: JSON.stringify({ input: 'hello' }),
     });
 
-    assert.equal(res.status, 200);
+    expect(res.status).toBe(200);
 
     const body = await res.json();
-    assert.equal(body.message, 'upstream OK');
-    assert.deepEqual(body.data, [1, 2, 3]);
+    expect(body.message).toBe('upstream OK');
+    expect(body.data).toEqual([1, 2, 3]);
 
     // Verify usage event was recorded
     const events = usageStore.getEvents(TEST_API_KEY);
-    assert.equal(events.length, 1);
-    assert.equal(events[0].apiId, TEST_API_ID);
-    assert.equal(events[0].statusCode, 200);
+    expect(events.length).toBe(1);
+    expect(events[0].apiId).toBe(TEST_API_ID);
+    expect(events[0].statusCode).toBe(200);
 
     // Verify billing was deducted (1000 - 1 = 999)
-    assert.equal(billing.getBalance(TEST_DEVELOPER_ID), 999);
+    expect(billing.getBalance(TEST_DEVELOPER_ID)).toBe(999);
   });
 
   it('returns 402 Payment Required when balance is insufficient', async () => {
@@ -145,15 +143,15 @@ describe('Gateway Proxy Integration', () => {
       body: JSON.stringify({}),
     });
 
-    assert.equal(res.status, 402);
+    expect(res.status).toBe(402);
 
     const body = await res.json();
-    assert.match(body.error, /insufficient balance/i);
-    assert.equal(body.balance, 0);
+    expect(body.error).toMatch(/insufficient balance/i);
+    expect(body.balance).toBe(0);
 
     // No usage event should be recorded
     const events = usageStore.getEvents(TEST_API_KEY);
-    assert.equal(events.length, 0);
+    expect(events.length).toBe(0);
   });
 
   it('returns 429 Too Many Requests when rate limited', async () => {
@@ -169,18 +167,18 @@ describe('Gateway Proxy Integration', () => {
       body: JSON.stringify({}),
     });
 
-    assert.equal(res.status, 429);
+    expect(res.status).toBe(429);
 
     const body = await res.json();
-    assert.match(body.error, /too many requests/i);
+    expect(body.error).toMatch(/too many requests/i);
 
     // Retry-After header should be present
     const retryAfter = res.headers.get('retry-after');
-    assert.ok(retryAfter, 'Expected Retry-After header');
+    expect(retryAfter).toBeTruthy();
 
     // No usage event should be recorded
     const events = usageStore.getEvents(TEST_API_KEY);
-    assert.equal(events.length, 0);
+    expect(events.length).toBe(0);
   });
 
   it('returns 401 when API key is missing or invalid', async () => {
@@ -190,7 +188,7 @@ describe('Gateway Proxy Integration', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    assert.equal(res1.status, 401);
+    expect(res1.status).toBe(401);
 
     // Invalid key
     const res2 = await fetch(`${gatewayUrl}/api/gateway/${TEST_API_ID}`, {
@@ -201,10 +199,10 @@ describe('Gateway Proxy Integration', () => {
       },
       body: JSON.stringify({}),
     });
-    assert.equal(res2.status, 401);
+    expect(res2.status).toBe(401);
 
     // No usage events
-    assert.equal(usageStore.getEvents().length, 0);
+    expect(usageStore.getEvents().length).toBe(0);
   });
 
   it('records usage event even when upstream returns 500', async () => {
@@ -222,14 +220,14 @@ describe('Gateway Proxy Integration', () => {
       body: JSON.stringify({}),
     });
 
-    assert.equal(res.status, 500);
+    expect(res.status).toBe(500);
 
     // Usage event should still be recorded with status 500
     const events = usageStore.getEvents(TEST_API_KEY);
-    assert.equal(events.length, 1);
-    assert.equal(events[0].statusCode, 500);
+    expect(events.length).toBe(1);
+    expect(events[0].statusCode).toBe(500);
 
     // Billing was still deducted (call succeeded from gateway perspective)
-    assert.equal(billing.getBalance(TEST_DEVELOPER_ID), 999);
+    expect(billing.getBalance(TEST_DEVELOPER_ID)).toBe(999);
   });
 });
