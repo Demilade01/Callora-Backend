@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import adminRouter from './routes/admin.js';
+import { parsePagination, paginatedResponse } from './lib/pagination.js';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -32,12 +33,14 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'callora-backend' });
 });
 
-app.get('/api/apis', (_req, res) => {
-  res.json({ apis: [] });
+app.get('/api/apis', (req, res) => {
+  const { limit, offset } = parsePagination(req.query as { limit?: string; offset?: string });
+  res.json(paginatedResponse([], { limit, offset }));
 });
 
-app.get('/api/usage', (_req, res) => {
-  res.json({ calls: 0, period: 'current' });
+app.get('/api/usage', (req, res) => {
+  const { limit, offset } = parsePagination(req.query as { limit?: string; offset?: string });
+  res.json(paginatedResponse([], { limit, offset }));
 });
 
 if (process.env.NODE_ENV !== 'test') {
