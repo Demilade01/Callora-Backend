@@ -16,6 +16,7 @@
     "validate:issue-9": "node scripts/validate-issue-9.mjs"
   },
   "dependencies": {
+    "@stellar/stellar-sdk": "^11.0.0",
     "axios": "^1.13.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.2.2",
