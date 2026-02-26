@@ -1,37 +1,45 @@
 import express from 'express';
-import type { Pool } from 'pg';
 import cors from 'cors';
 import adminRouter from './routes/admin.js';
-
 import {
   InMemoryUsageEventsRepository,
   type GroupBy,
   type UsageEventsRepository,
 } from './repositories/usageEventsRepository.js';
-import { defaultApiRepository, type ApiRepository } from './repositories/apiRepository.js';
-import { defaultDeveloperRepository, type DeveloperRepository } from './repositories/developerRepository.js';
-import { apiStatusEnum, type ApiStatus } from './db/schema.js';
+import {
+  defaultApiRepository,
+  type ApiRepository,
+  type CreateApiInput,
+  type ApiWithEndpoints,
+  createApi,
+} from './repositories/apiRepository.js';
+import {
+  defaultDeveloperRepository,
+  type DeveloperRepository,
+  findByUserId,
+} from './repositories/developerRepository.js';
+import { apiStatusEnum, type ApiStatus, httpMethodEnum } from './db/schema.js';
+import type { Developer } from './db/schema.js';
 import { requireAuth, type AuthenticatedLocals } from './middleware/requireAuth.js';
 import { buildDeveloperAnalytics } from './services/developerAnalytics.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { performHealthCheck, type HealthCheckConfig } from './services/healthCheck.js';
-
-interface AppDependencies {
-  usageEventsRepository: UsageEventsRepository;
-  healthCheckConfig?: HealthCheckConfig;
-import adminRouter from './routes/admin.js';
 import { parsePagination, paginatedResponse } from './lib/pagination.js';
 import { InMemoryVaultRepository, type VaultRepository } from './repositories/vaultRepository.js';
 import { DepositController } from './controllers/depositController.js';
 import { TransactionBuilderService } from './services/transactionBuilder.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { requestLogger } from './middleware/logging.js';
+import { BadRequestError } from './errors/index.js';
 
 interface AppDependencies {
-  usageEventsRepository: UsageEventsRepository;
-  vaultRepository: VaultRepository;
-  apiRepository: ApiRepository;
-  developerRepository: DeveloperRepository;
+  usageEventsRepository?: UsageEventsRepository;
+  healthCheckConfig?: HealthCheckConfig;
+  vaultRepository?: VaultRepository;
+  apiRepository?: ApiRepository;
+  developerRepository?: DeveloperRepository;
+  findDeveloperByUserId?: (userId: string) => Promise<Developer | undefined>;
+  createApiWithEndpoints?: (input: CreateApiInput) => Promise<ApiWithEndpoints>;
 }
 
 const isValidGroupBy = (value: string): value is GroupBy =>
@@ -69,6 +77,8 @@ export const createApp = (dependencies?: Partial<AppDependencies>) => {
     dependencies?.usageEventsRepository ?? new InMemoryUsageEventsRepository();
   const vaultRepository =
     dependencies?.vaultRepository ?? new InMemoryVaultRepository();
+  const lookupDeveloper = dependencies?.findDeveloperByUserId ?? findByUserId;
+  const persistApi = dependencies?.createApiWithEndpoints ?? createApi;
 
   // Initialize deposit controller
   const transactionBuilder = new TransactionBuilderService();
@@ -134,11 +144,10 @@ export const createApp = (dependencies?: Partial<AppDependencies>) => {
         },
       });
     }
+  });
+
   app.use('/api/admin', adminRouter);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'callora-backend' });
-  });
 
   app.get('/api/apis', (req, res) => {
     const { limit, offset } = parsePagination(req.query as { limit?: string; offset?: string });
@@ -297,6 +306,100 @@ export const createApp = (dependencies?: Partial<AppDependencies>) => {
   // Deposit transaction preparation endpoint
   app.post('/api/vault/deposit/prepare', requireAuth, (req, res: express.Response<unknown, AuthenticatedLocals>) => {
     depositController.prepareDeposit(req, res);
+  });
+
+  // POST /api/developers/apis — publish a new API (authenticated)
+  app.post('/api/developers/apis', requireAuth, async (req, res: express.Response<unknown, AuthenticatedLocals>, next) => {
+    try {
+      const user = res.locals.authenticatedUser;
+      if (!user) {
+        next(new BadRequestError('Unauthorized'));
+        return;
+      }
+
+      const { name, description, base_url, category, status, endpoints } = req.body as Record<string, unknown>;
+
+      // Validate required string fields
+      if (!name || typeof name !== 'string' || name.trim() === '') {
+        next(new BadRequestError('name is required'));
+        return;
+      }
+
+      if (!base_url || typeof base_url !== 'string' || base_url.trim() === '') {
+        next(new BadRequestError('base_url is required'));
+        return;
+      }
+
+      // Validate base_url is a proper URL
+      try {
+        new URL(base_url);
+      } catch {
+        next(new BadRequestError('base_url must be a valid URL (e.g. https://api.example.com)'));
+        return;
+      }
+
+      // Validate optional status
+      if (status !== undefined && !apiStatusEnum.includes(status as typeof apiStatusEnum[number])) {
+        next(new BadRequestError(`status must be one of: ${apiStatusEnum.join(', ')}`));
+        return;
+      }
+
+      // Validate endpoints array
+      if (!Array.isArray(endpoints)) {
+        next(new BadRequestError('endpoints must be an array'));
+        return;
+      }
+
+      for (let i = 0; i < endpoints.length; i++) {
+        const ep = endpoints[i] as Record<string, unknown>;
+
+        if (!ep.path || typeof ep.path !== 'string' || !ep.path.startsWith('/')) {
+          next(new BadRequestError(`endpoints[${i}].path must be a string starting with /`));
+          return;
+        }
+
+        if (!ep.method || !httpMethodEnum.includes(ep.method as typeof httpMethodEnum[number])) {
+          next(new BadRequestError(`endpoints[${i}].method must be one of: ${httpMethodEnum.join(', ')}`));
+          return;
+        }
+
+        if (
+          !ep.price_per_call_usdc ||
+          typeof ep.price_per_call_usdc !== 'string' ||
+          isNaN(parseFloat(ep.price_per_call_usdc)) ||
+          parseFloat(ep.price_per_call_usdc) < 0
+        ) {
+          next(new BadRequestError(`endpoints[${i}].price_per_call_usdc must be a non-negative numeric string`));
+          return;
+        }
+      }
+
+      // Ensure the caller has a developer profile
+      const developer = await lookupDeveloper(user.id);
+      if (!developer) {
+        next(new BadRequestError('Developer profile not found. Create a developer profile first.', 'DEVELOPER_NOT_FOUND'));
+        return;
+      }
+
+      const api = await persistApi({
+        developer_id: developer.id,
+        name: name.trim(),
+        description: typeof description === 'string' ? description : null,
+        base_url: base_url.trim(),
+        category: typeof category === 'string' ? category : null,
+        status: (status as typeof apiStatusEnum[number]) ?? 'draft',
+        endpoints: (endpoints as Array<Record<string, unknown>>).map((ep) => ({
+          path: ep.path as string,
+          method: ep.method as typeof httpMethodEnum[number],
+          price_per_call_usdc: ep.price_per_call_usdc as string,
+          description: typeof ep.description === 'string' ? ep.description : null,
+        })),
+      });
+
+      res.status(201).json(api);
+    } catch (err) {
+      next(err);
+    }
   });
 
   app.use(errorHandler);
