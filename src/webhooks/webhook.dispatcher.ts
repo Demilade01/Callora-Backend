@@ -65,7 +65,7 @@ export async function dispatchWebhook(
         }
     }
 
-    console.error(
+    logger.error(
         `[webhook] ✗ Failed to deliver ${payload.event} to ${config.url} after ${MAX_RETRIES} attempts.`,
         lastError
     );

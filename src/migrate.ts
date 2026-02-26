@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { logger } from './logger.js';
 
 // @ts-ignore - ES module
 const __filename = fileURLToPath(import.meta.url);
@@ -33,7 +34,7 @@ try {
 
 } catch (error) {
   db.exec('ROLLBACK');
-  console.error('❌ Migration failed:', error);
+  logger.error('❌ Migration failed:', error);
   throw error;
 } finally {
   db.close();
