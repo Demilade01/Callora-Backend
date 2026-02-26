@@ -7,3 +7,8 @@ dist
 *.log
 
 /src/generated/prisma
+
+# Database
+database.db
+database.db-*
+coverage/
