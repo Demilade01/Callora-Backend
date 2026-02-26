@@ -1,8 +1,16 @@
+import request from "supertest";
+import app from "./index.js";
+
 import assert from 'node:assert/strict';
-import test, { describe, it } from 'node:test';
-import request from 'supertest';
-import app from './index.js';
-import { apiKeyRepository } from './repositories/apiKeyRepository.js';
+import test from 'node:test';
+
+describe("Health API", () => {
+  it("should return ok status", async () => {
+    const response = await request(app).get("/api/health");
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe("ok");
+  });
+
 
 test('Health API returns ok status', async () => {
   const response = await request(app).get('/api/health');
