@@ -9,6 +9,7 @@ import {
 import { requireAuth, type AuthenticatedLocals } from './middleware/requireAuth.js';
 import { buildDeveloperAnalytics } from './services/developerAnalytics.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { requestLogger } from './middleware/logging.js';
 
 interface AppDependencies {
   usageEventsRepository: UsageEventsRepository;
@@ -34,6 +35,7 @@ export const createApp = (dependencies?: Partial<AppDependencies>) => {
   const usageEventsRepository =
     dependencies?.usageEventsRepository ?? new InMemoryUsageEventsRepository();
 
+  app.use(requestLogger);
   const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
