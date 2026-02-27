@@ -62,7 +62,6 @@ router.get('/:developerId', (req: Request, res: Response) => {
     // Never expose the secret
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { secret: _s, ...safeConfig } = config;
-    const { secret: _s, ...safeConfig } = config; // eslint-disable-line @typescript-eslint/no-unused-vars
     return res.json(safeConfig);
 });
 

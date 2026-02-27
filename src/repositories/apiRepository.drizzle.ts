@@ -9,19 +9,6 @@ export class DrizzleApiRepository implements ApiRepository {
     if (filters.status) {
       conditions.push(eq(schema.apis.status, filters.status));
     }
-    const results = await db.select().from(schema.apis).where(and(...conditions));
-    let rows = results as Api[];
-    if (typeof filters.offset === 'number') {
-      rows = rows.slice(filters.offset);
-    }
-    if (typeof filters.limit === 'number') {
-      rows = rows.slice(0, filters.limit);
-    }
-    return rows;
-    const conditions = [eq(schema.apis.developer_id, developerId)];
-    if (filters.status) {
-      conditions.push(eq(schema.apis.status, filters.status));
-    }
 
     let query = db.select().from(schema.apis).where(and(...conditions));
 

@@ -5,6 +5,7 @@ dist
 .env
 .env.*
 *.log
+package-lock.json
 
 /src/generated/prisma
 /.idea
