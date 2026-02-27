@@ -1,7 +1,6 @@
 import request from 'supertest';
 import express from 'express';
 import { apiKeyRepository } from '../repositories/apiKeyRepository.js';
-import { requireAuth } from '../middleware/requireAuth.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 
 function createTestApp() {
@@ -22,7 +21,7 @@ function createTestApp() {
     }
   });
 
-  app.delete('/api/keys/:id', (req, res: express.Response<unknown, any>, next) => {
+  app.delete('/api/keys/:id', (req, res: express.Response<unknown, { authenticatedUser: { id: string, email: string } }>) => {
     const user = res.locals.authenticatedUser;
     if (!user) {
       res.status(401).json({ error: 'Unauthorized' });

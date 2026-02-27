@@ -15,6 +15,8 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.4.1",
+    "@stellar/stellar-sdk": "^14.5.0",
     "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^9.2.2",
@@ -27,6 +29,7 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
     "pino": "^10.3.1",
+    "prisma": "^7.4.1",
     "prom-client": "^15.1.0",
     "uuid": "^13.0.0"
   },
@@ -49,8 +52,8 @@
     "eslint": "^10.0.2",
     "globals": "^17.3.0",
     "jest": "^30.2.0",
-    "picomatch": "^2.3.1",
     "pg-mem": "^3.0.13",
+    "picomatch": "^2.3.1",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.6",
     "tsx": "^4.7.0",

@@ -6,13 +6,15 @@ import type { ApiRepository, ApiListFilters } from './repositories/apiRepository
 import type { Developer } from './db/schema.js';
 import type { DeveloperRepository } from './repositories/developerRepository.js';
 import { InMemoryApiRepository } from './repositories/apiRepository.js';
+import assert from 'node:assert';
+import { mock } from 'node:test';
 // Mock better-sqlite3 before any module that transitively imports it is loaded.
 // This allows unit tests for app.ts to run without a compiled native binding.
 await mock.module('better-sqlite3', {
   defaultExport: class MockDatabase {
     prepare() { return { get: () => null }; }
-    exec() {}
-    close() {}
+    exec() { }
+    close() { }
   },
 });
 
@@ -116,7 +118,7 @@ const sampleApis: Api[] = [
 ];
 
 class FakeApiRepository implements ApiRepository {
-  constructor(private readonly apis: Api[]) {}
+  constructor(private readonly apis: Api[]) { }
 
   async listByDeveloper(developerId: number, filters: ApiListFilters = {}): Promise<Api[]> {
     let results = this.apis.filter((api) => api.developer_id === developerId);

@@ -4,6 +4,8 @@ import * as schema from './schema.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+const logger = console;
+
 // Create SQLite database instance
 const sqlite = new Database('./database.db');
 

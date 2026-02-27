@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { logger } from './logger.js';
 
-// @ts-ignore - ES module
+// ES module
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
