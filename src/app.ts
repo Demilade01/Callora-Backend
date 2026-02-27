@@ -32,6 +32,7 @@ import { TransactionBuilderService } from './services/transactionBuilder.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { requestLogger } from './middleware/logging.js';
 import { BadRequestError } from './errors/index.js';
+import { apiKeyRepository } from './repositories/apiKeyRepository.js';
 
 interface AppDependencies {
   usageEventsRepository?: UsageEventsRepository;
@@ -313,6 +314,25 @@ export const createApp = (dependencies?: Partial<AppDependencies>) => {
   // Vault balance endpoint
   app.get('/api/vault/balance', requireAuth, (req, res: express.Response<unknown, AuthenticatedLocals>) => {
     vaultController.getBalance(req, res);
+  });
+
+  // Revoke API key endpoint
+  app.delete('/api/keys/:id', requireAuth, (req, res: express.Response<unknown, AuthenticatedLocals>) => {
+    const user = res.locals.authenticatedUser;
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { id } = req.params;
+    const result = apiKeyRepository.revoke(id, user.id);
+
+    if (result === 'forbidden') {
+      res.status(403).json({ error: 'Forbidden' });
+      return;
+    }
+
+    res.status(204).send();
   });
 
   // POST /api/developers/apis — publish a new API (authenticated)
