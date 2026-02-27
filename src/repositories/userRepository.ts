@@ -10,6 +10,18 @@ interface FindUsersResult {
 }
 
 export async function findUsers(params: PaginationParams): Promise<FindUsersResult> {
+
+interface PaginatedUsers {
+  users: Pick<User, 'id' | 'stellar_address' | 'created_at'>[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export async function findUsers(page: number, limit: number): Promise<PaginatedUsers> {
+  const skip = (page - 1) * limit;
+
   const [users, total] = await prisma.$transaction([
     prisma.user.findMany({
       select: {
@@ -20,9 +32,18 @@ export async function findUsers(params: PaginationParams): Promise<FindUsersResu
       orderBy: { created_at: 'desc' },
       skip: params.offset,
       take: params.limit,
+      skip,
+      take: limit,
     }),
     prisma.user.count(),
   ]);
 
   return { users, total };
+  return {
+    users,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 }

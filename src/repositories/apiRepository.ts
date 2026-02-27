@@ -1,4 +1,5 @@
 import { eq, and, type SQL } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db, schema } from '../db/index.js';
 import type { Api, ApiStatus } from '../db/schema.js';
 
@@ -41,6 +42,7 @@ export interface ApiRepository {
 export const defaultApiRepository: ApiRepository = {
   async listByDeveloper(developerId, filters = {}) {
     const conditions: SQL[] = [eq(schema.apis.developer_id, developerId)];
+    const conditions = [eq(schema.apis.developer_id, developerId)];
     if (filters.status) {
       conditions.push(eq(schema.apis.status, filters.status));
     }
@@ -58,6 +60,17 @@ export const defaultApiRepository: ApiRepository = {
       rows = rows.slice(0, filters.limit);
     }
     return rows;
+    let query = db.select().from(schema.apis).where(and(...conditions));
+
+    if (typeof filters.limit === 'number') {
+      query = query.limit(filters.limit) as typeof query;
+    }
+
+    if (typeof filters.offset === 'number') {
+      query = query.offset(filters.offset) as typeof query;
+    }
+
+    return query;
   },
 
   async findById() {

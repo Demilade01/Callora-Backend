@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import adminRouter from './routes/admin.js';
 
 import {
   InMemoryUsageEventsRepository,

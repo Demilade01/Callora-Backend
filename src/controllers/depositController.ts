@@ -145,6 +145,7 @@ export class DepositController {
           function: unsignedTx.operation.function as 'deposit',
           args: unsignedTx.operation.args,
         },
+        operation: unsignedTx.operation as DepositPrepareResponse['operation'],
         metadata: {
           fee: unsignedTx.fee,
           timeout: unsignedTx.timeout,

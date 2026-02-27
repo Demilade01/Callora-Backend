@@ -18,6 +18,22 @@ export class DrizzleApiRepository implements ApiRepository {
       rows = rows.slice(0, filters.limit);
     }
     return rows;
+    const conditions = [eq(schema.apis.developer_id, developerId)];
+    if (filters.status) {
+      conditions.push(eq(schema.apis.status, filters.status));
+    }
+
+    let query = db.select().from(schema.apis).where(and(...conditions));
+
+    if (typeof filters.limit === 'number') {
+      query = query.limit(filters.limit) as typeof query;
+    }
+
+    if (typeof filters.offset === 'number') {
+      query = query.offset(filters.offset) as typeof query;
+    }
+
+    return query;
   }
 
   async findById(id: number): Promise<ApiDetails | null> {
