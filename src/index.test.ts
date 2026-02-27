@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import request from 'supertest';

@@ -1,5 +1,8 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/?(*.)+(spec|test).ts'],
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   testMatch: ['**/?(*.)+(spec|test).ts'],
@@ -16,6 +19,19 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        useESM: false,
+        tsconfig: {
+          module: 'commonjs',
+          moduleResolution: 'node',
+          isolatedModules: true,
+        },
+      },
+    ],
+  },
+};
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: true,
       tsconfig: {
